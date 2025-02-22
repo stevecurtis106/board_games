@@ -1,15 +1,18 @@
 import random
 from space import Go, Property, CommunityChest, Chance, Jail, Utility, Railroad, Tax, FreeParking, GoToJail
+import os
 
 class Game:
     def __init__(self, players):
         self.players = players
         self.current_player_index = 0
+        os.system('cls' if os.name == 'nt' else 'clear')
         self.determine_turn_order()
         self.create_board()
 
     # Whoever rolls the highest goes first
     def determine_turn_order(self):
+        print(f'\nRolling to determine turn order...')
         rolls = {player: self.roll_dice(player) for player in self.players}
         self.players = [player for player, _ in sorted(rolls.items(), key=lambda x: x[1], reverse=True)]
         print(f'\n{self.players[0]} goes first!')
@@ -58,6 +61,11 @@ class Game:
             Property('Boardwalk', 400, 50, 200, 600, 1400, 1700, 2000, 200, 'dark blue')
         ]
 
+    def calculate_rent(self, position, owner):
+        print("Calculating rent...")
+        return 10
+
+
     # Rolls 2 six-sided dice
     def roll_dice(self, player):
         input(f'{player} - press enter to roll the dice.')
@@ -74,6 +82,7 @@ class Game:
 
     def play(self):
         while True:
+            os.system('cls' if os.name == 'nt' else 'clear')
             double_count = 0
             roll = None
             player = self.players[self.current_player_index]
@@ -82,7 +91,7 @@ class Game:
                 (roll, is_double) = self.roll_dice(player)
                 if is_double:
                     player.position = (player.position + roll) % 40
-                    print(f'{player} landed on {self.board[player.position]}. Go again!')
+                    print(f'{player} landed on {self.board[player.position]}. Rolled a double, go again!')
                     double_count += 1
                 else:
                     break
@@ -95,5 +104,35 @@ class Game:
                 player.position = (player.position + roll) % 40
                 print(f'{player} landed on {self.board[player.position]}')
 
+                # Check if space is buyable
+                if isinstance(self.board[player.position], (Property, Railroad, Utility)):
+                    if self.board[player.position].owner is None:
+                        print(f'{self.board[player.position]} is unowned. Would you like to buy it?')
+                        buy = input('y/n: ')
+                        if buy == 'y':
+                            if player.money < self.board[player.position].price:
+                                print(f'{player} does not have enough money to buy {self.board[player.position]}.')
+                            else:
+                                self.board[player.position].owner = player
+                                player.money -= self.board[player.position].price
+                                player.properties.append(self.board[player.position])
+                                print(f'{player} bought {self.board[player.position]} for ${self.board[player.position].price}.')
+                        else:
+                            print(f'{player} did not buy {self.board[player.position]}.')
+                    # Pay rent if owned by another player
+                    else:
+                        if self.board[player.position].owner != player:
+                            rent = self.calculate_rent(player.position, self.board[player.position].owner)
+                            player.money -= rent
+                            self.board[player.position].owner.money += rent
+                            print(f'{player} paid {self.board[player.position].owner} ${rent} in rent.')
+                            if player.money < 0:
+                                print(f'{player} is bankrupt!')
+                                self.players.remove(player)
+                                if (len(self.players) == 1):
+                                    print(f'{self.players[0]} wins!')
+                                    return
             
             self.current_player_index = (self.current_player_index + 1) % len(self.players)
+
+            input('Press enter to end turn...')

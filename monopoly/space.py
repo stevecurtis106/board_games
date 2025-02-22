@@ -21,6 +21,7 @@ class Property(Space):
         self.owner = None
         self.houses = 0
         self.mortgaged = False
+        self.in_monopoly = False
 
 
 class Jail(Space):
